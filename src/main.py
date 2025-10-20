@@ -1,66 +1,46 @@
-"""Sample script to call Azure OpenAI GPT-4o using DefaultAzureCredential."""
+"""Sample script to call Azure OpenAI using the Responses API and DefaultAzureCredential."""
 
 from __future__ import annotations
 
 import os
-from typing import Iterable
 
-from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import (
-    ChatCompletionsRequest,
-    SystemMessage,
-    TextContentItem,
-    UserMessage,
-)
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
+from openai import OpenAI
+
+_SCOPE = "https://cognitiveservices.azure.com/.default"
 
 
-def create_client() -> ChatCompletionsClient:
-    """Instantiate a chat client using the DefaultAzureCredential."""
-    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-    if not endpoint:
-        raise ValueError("Set the AZURE_OPENAI_ENDPOINT environment variable.")
-
-    credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
-    return ChatCompletionsClient(endpoint=endpoint, credential=credential)
+def _get_required_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise ValueError(f"Set the {name} environment variable.")
+    return value
 
 
-def build_request() -> ChatCompletionsRequest:
-    """Build the chat completion request payload."""
-    model = os.environ.get("AZURE_OPENAI_DEPLOYMENT")
-    if not model:
-        raise ValueError("Set the AZURE_OPENAI_DEPLOYMENT environment variable.")
-
-    messages = [
-        SystemMessage(content="You are a helpful assistant."),
-        UserMessage(content="Donne moi une blague courte en français sur les nuages."),
-    ]
-
-    return ChatCompletionsRequest(model=model, messages=messages, temperature=0.7)
-
-
-def extract_text(content: Iterable[TextContentItem]) -> str:
-    """Flatten the list of content blocks returned by the API."""
-    parts: list[str] = []
-    for block in content:
-        if isinstance(block, TextContentItem):
-            parts.append(block.text)
-    return "\n".join(parts)
+def _build_base_url(endpoint: str) -> str:
+    endpoint = endpoint.rstrip("/")
+    return f"{endpoint}/openai/v1/"
 
 
 def main() -> None:
-    """Load configuration, send a test prompt, and print the response."""
+    """Resolve configuration, send a test prompt, and print the JSON response."""
     load_dotenv()
 
-    client = create_client()
-    request = build_request()
+    endpoint = _get_required_env("AZURE_OPENAI_ENDPOINT")
+    deployment = _get_required_env("AZURE_OPENAI_DEPLOYMENT")
+    prompt = os.environ.get(
+        "AZURE_OPENAI_TEST_PROMPT",
+        "Peux-tu me donner une courte blague en français sur les nuages ?",
+    )
 
-    response = client.complete(request)
+    credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+    token_provider = get_bearer_token_provider(credential, _SCOPE)
 
-    choice = response.choices[0]
-    print("Assistant:")
-    print(extract_text(choice.message.content))
+    client = OpenAI(base_url=_build_base_url(endpoint), api_key=token_provider)
+
+    response = client.responses.create(model=deployment, input=prompt)
+    print(response.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

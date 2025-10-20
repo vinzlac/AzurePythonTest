@@ -1,12 +1,12 @@
-# Azure OpenAI GPT-4o Sample (Python)
+# Azure OpenAI Responses Sample (Python)
 
-Ce dépôt contient un petit script Python qui appelle le service Azure OpenAI (modèle GPT-4o) en utilisant l'authentification Microsoft Entra ID via `DefaultAzureCredential`.
+Ce dépôt contient un petit script Python qui appelle le service Azure OpenAI (API Responses) en utilisant l'authentification Microsoft Entra ID via `DefaultAzureCredential`.
 
 ## Prérequis
 
 1. Python 3.9 ou supérieur.
 2. Un compte Azure avec un accès au service [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/).
-3. Une ressource Azure OpenAI configurée avec un déploiement du modèle `gpt-4o`.
+3. Une ressource Azure OpenAI configurée avec un déploiement du modèle cible (par exemple `gpt-4.1-nano` ou `gpt-4o`).
 4. Une authentification Entra ID configurée (par exemple, via `az login`).
 
 ## Installation
@@ -22,8 +22,9 @@ pip install -r requirements.txt
 Définissez les variables d'environnement suivantes (manuellement ou dans un fichier `.env`).
 
 ```bash
-export AZURE_OPENAI_ENDPOINT="https://<votre-point-de-termination>.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="gpt-4o"
+export AZURE_OPENAI_ENDPOINT="https://<votre-ressource>.openai.azure.com"
+export AZURE_OPENAI_DEPLOYMENT="gpt-4.1-nano"  # Remplacez par le nom de votre déploiement
+export AZURE_OPENAI_TEST_PROMPT="Optionnel: votre prompt de test personnalisé"
 ```
 
 Si vous utilisez un fichier `.env`, placez-le à la racine du projet avec le contenu ci-dessus.
@@ -40,7 +41,7 @@ az login
 python src/main.py
 ```
 
-Le script enverra un prompt de test en français au modèle GPT-4o et affichera la réponse de l'assistant.
+Le script enverra un prompt de test en français (ou celui défini dans `AZURE_OPENAI_TEST_PROMPT`) au modèle et affichera la réponse JSON renvoyée par l'API.
 
 ## Ressources
 
