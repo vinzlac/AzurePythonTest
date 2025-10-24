@@ -1,4 +1,4 @@
-"""Script pour récupérer et afficher le token JWT d'un Service Principal pour Azure PostgreSQL."""
+"""Script pour récupérer et afficher le token JWT pour Azure PostgreSQL."""
 
 from __future__ import annotations
 
@@ -6,6 +6,17 @@ import json
 import base64
 from datetime import datetime
 from azure.identity import DefaultAzureCredential
+
+# Applications Azure connues
+KNOWN_AZURE_APPS = {
+    "04b07795-8ddb-461a-bbee-02f9e1bf7b46": "Azure CLI",
+    "1950a258-227b-4e31-a9cf-717495945fc2": "Azure PowerShell",
+    "e9f49c6b-5ce5-44c8-925d-015017e9f7ad": "Visual Studio 2022",
+    "872cd9fa-d31f-45e0-9eab-6e460a02d1f1": "Visual Studio",
+    "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa": "Azure Data Studio",
+    "c44b4083-3bb0-49c1-b47d-974e53cbdf3c": "Azure Portal",
+    "89bee1f7-5e6e-4d8a-9f3d-ecd601259da7": "Office 365 Management",
+}
 
 
 def decode_jwt_payload(token: str) -> dict:
@@ -74,17 +85,62 @@ def main() -> None:
             print("📋 Informations du token:")
             print("-" * 80)
             
+            # Type d'identité
+            if 'idtyp' in payload:
+                idtyp = payload['idtyp']
+                if idtyp == 'user':
+                    print(f"Type d'identité:       👤 Utilisateur (user)")
+                elif idtyp == 'app':
+                    print(f"Type d'identité:       🤖 Service Principal (app)")
+                else:
+                    print(f"Type d'identité:       {idtyp}")
+                print()
+            
+            # Informations utilisateur (si c'est un user token)
+            if 'upn' in payload:
+                print(f"User Principal Name:   {payload['upn']}")
+            if 'name' in payload:
+                print(f"Nom:                   {payload['name']}")
+            if 'unique_name' in payload:
+                print(f"Unique Name:           {payload['unique_name']}")
+            
             # Informations principales
             if 'aud' in payload:
                 print(f"Audience (aud):        {payload['aud']}")
             if 'iss' in payload:
                 print(f"Issuer (iss):          {payload['iss']}")
             if 'appid' in payload:
-                print(f"Application ID:        {payload['appid']}")
+                appid = payload['appid']
+                app_name = KNOWN_AZURE_APPS.get(appid, "Application inconnue")
+                print(f"Application ID:        {appid}")
+                print(f"  └─ Application:      {app_name}")
             if 'oid' in payload:
                 print(f"Object ID:             {payload['oid']}")
             if 'tid' in payload:
                 print(f"Tenant ID:             {payload['tid']}")
+            
+            # Scopes et permissions
+            if 'scp' in payload:
+                scopes = payload['scp']
+                print(f"Scopes (scp):          {scopes}")
+            if 'roles' in payload:
+                roles = payload['roles']
+                if isinstance(roles, list):
+                    print(f"Roles:                 {', '.join(roles)}")
+                else:
+                    print(f"Roles:                 {roles}")
+            
+            # Groupes de sécurité
+            if 'groups' in payload:
+                groups = payload['groups']
+                if isinstance(groups, list):
+                    print(f"Groupes de sécurité:   {len(groups)} groupe(s)")
+                    for i, group_id in enumerate(groups[:5], 1):  # Afficher max 5 groupes
+                        print(f"  {i}. {group_id}")
+                    if len(groups) > 5:
+                        print(f"  ... et {len(groups) - 5} autres groupes")
+            
+            print()
             
             # Dates importantes
             if 'iat' in payload:
@@ -104,6 +160,15 @@ def main() -> None:
                     print(f"Temps restant:         {hours}h {minutes}m")
                 else:
                     print("⚠️  Token EXPIRÉ!")
+            
+            # Méthodes d'authentification
+            if 'amr' in payload:
+                amr = payload['amr']
+                if isinstance(amr, list):
+                    amr_str = ', '.join(amr)
+                    print(f"Auth. methods (amr):   {amr_str}")
+                    if 'mfa' in amr:
+                        print("  ✅ Multi-Factor Authentication activé")
             
             print("-" * 80)
             
